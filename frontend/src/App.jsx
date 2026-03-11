@@ -418,6 +418,7 @@ export default function App() {
   const [selectedReportId, setSelectedReportId] = useState(null)
   const [error, setError] = useState('')
   const [page, setPage] = useState(getPageFromLocation)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   async function loadAuthenticatedApp(currentUser) {
     setError('')
@@ -564,23 +565,52 @@ export default function App() {
           <AdminPanel reports={reports} users={users} refreshAdmin={refreshAdmin} />
         </section>
       ) : (
-        <section className="content-grid">
-          <aside className="card report-list">
-            <h2>Reports</h2>
-            {reports.length === 0 && <p className="muted">No reports available for your account.</p>}
-            {reports.map((report) => (
+        <section className={sidebarOpen ? 'content-grid sidebar-open' : 'content-grid sidebar-closed'}>
+          <aside className={sidebarOpen ? 'card report-list' : 'card report-list collapsed'}>
+            <div className="report-list-header">
+              <h2>Reports</h2>
               <button
-                className={report.id === selectedReportId ? 'report-btn active' : 'report-btn'}
-                key={report.id}
-                onClick={() => setSelectedReportId(report.id)}
+                type="button"
+                className="sidebar-toggle"
+                onClick={() => setSidebarOpen((open) => !open)}
+                aria-expanded={sidebarOpen}
+                aria-label={sidebarOpen ? 'Collapse report list' : 'Expand report list'}
               >
-                {report.name}
+                {sidebarOpen ? 'Hide' : 'Show'}
               </button>
-            ))}
+            </div>
+            {sidebarOpen && (
+              <>
+                {reports.length === 0 && <p className="muted">No reports available for your account.</p>}
+                {reports.map((report) => (
+                  <button
+                    className={report.id === selectedReportId ? 'report-btn active' : 'report-btn'}
+                    key={report.id}
+                    onClick={() => setSelectedReportId(report.id)}
+                  >
+                    {report.name}
+                  </button>
+                ))}
+              </>
+            )}
           </aside>
 
           <section className="card embed-area">
-            <h2>{selectedReport ? selectedReport.name : 'Embedded Report'}</h2>
+            <div className="embed-header">
+              <div>
+                <p className="section-kicker">Shared report</p>
+                <h2>{selectedReport ? selectedReport.name : 'Embedded Report'}</h2>
+              </div>
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  className="sidebar-toggle sidebar-toggle-inline"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  Browse reports
+                </button>
+              )}
+            </div>
             <ReportEmbed report={selectedReport} />
           </section>
         </section>
