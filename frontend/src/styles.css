@@ -2,6 +2,10 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #121212;
   background: #f2f4f8;
+  --brand-blue: #153a73;
+  --brand-blue-dark: #102b55;
+  --brand-blue-light: #d9e6fb;
+  --brand-blue-border: #315892;
 }
 
 * {
@@ -38,6 +42,16 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-blue-dark));
+  color: #f8fbff;
+}
+
+.topbar h1 {
+  margin: 0;
+}
+
+.topbar .muted {
+  color: var(--brand-blue-light);
 }
 
 .topbar-actions {
@@ -52,17 +66,18 @@ body {
 }
 
 .nav-btn {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fbff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .nav-btn:hover {
-  background: #cbd5e1;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-btn.active {
-  background: #0f172a;
-  color: #fff;
+  background: #f8fbff;
+  color: var(--brand-blue-dark);
 }
 
 .content-grid {
@@ -85,20 +100,36 @@ body {
   display: grid;
   gap: 0.5rem;
   align-content: start;
+  background: linear-gradient(180deg, var(--brand-blue), var(--brand-blue-dark));
+  color: #f8fbff;
+}
+
+.report-list h2 {
+  margin: 0;
+}
+
+.report-list .muted {
+  color: var(--brand-blue-light);
 }
 
 .report-btn {
   text-align: left;
-  border: 1px solid #dbe1ea;
-  background: #f8fafc;
+  border: 1px solid var(--brand-blue-border);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fbff;
   border-radius: 8px;
   padding: 0.6rem;
   cursor: pointer;
 }
 
+.report-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .report-btn.active {
-  border-color: #1d4ed8;
-  background: #eff6ff;
+  border-color: #f8fbff;
+  background: #f8fbff;
+  color: var(--brand-blue-dark);
 }
 
 .embed-area {
