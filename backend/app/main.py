@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from sqlalchemy import inspect, select, text
+from sqlalchemy import func, inspect, select, text
 from sqlalchemy.orm import Session
 
 from .auth import COOKIE_NAME, create_access_token, get_current_user, hash_password, require_admin, verify_password
@@ -89,6 +89,10 @@ def serialize_user(user: User) -> dict:
     }
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
 def ensure_schema() -> None:
     inspector = inspect(engine)
     if 'users' not in inspector.get_table_names():
@@ -119,12 +123,13 @@ def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_schema()
     with SessionLocal() as db:
-        existing = db.scalar(select(User).where(User.email == settings.admin_email))
+        admin_email = normalize_email(settings.admin_email)
+        existing = db.scalar(select(User).where(func.lower(User.email) == admin_email))
         if not existing:
             admin = User(
                 first_name='Admin',
                 last_name='User',
-                email=settings.admin_email,
+                email=admin_email,
                 password_hash=hash_password(settings.admin_password),
                 role='admin',
                 must_change_password=False,
@@ -135,7 +140,8 @@ def on_startup() -> None:
 
 @app.post('/auth/login')
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.email == payload.email))
+    email = normalize_email(payload.email)
+    user = db.scalar(select(User).where(func.lower(User.email) == email))
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credentials')
 
@@ -238,14 +244,15 @@ def create_user(payload: UserCreateRequest, _admin: User = Depends(require_admin
     if payload.role not in ('admin', 'user'):
         raise HTTPException(status_code=400, detail='Role must be admin or user')
 
-    exists = db.scalar(select(User).where(User.email == payload.email))
+    email = normalize_email(payload.email)
+    exists = db.scalar(select(User).where(func.lower(User.email) == email))
     if exists:
         raise HTTPException(status_code=409, detail='User already exists')
 
     user = User(
         first_name=payload.first_name,
         last_name=payload.last_name,
-        email=payload.email,
+        email=email,
         password_hash=hash_password(payload.password),
         role=payload.role,
         must_change_password=True,
@@ -270,13 +277,14 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
 
-    exists = db.scalar(select(User).where(User.email == payload.email, User.id != user_id))
+    email = normalize_email(payload.email)
+    exists = db.scalar(select(User).where(func.lower(User.email) == email, User.id != user_id))
     if exists:
         raise HTTPException(status_code=409, detail='User already exists')
 
     user.first_name = payload.first_name
     user.last_name = payload.last_name
-    user.email = payload.email
+    user.email = email
     user.role = payload.role
     db.add(user)
     db.commit()

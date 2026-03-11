@@ -22,7 +22,7 @@ export const api = {
   login: (email, password) =>
     request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
     }),
   changePassword: (current_password, new_password) =>
     request('/auth/change-password', {
