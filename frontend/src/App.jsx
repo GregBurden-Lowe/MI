@@ -14,7 +14,7 @@ function navigateTo(page) {
 
 function Login({ onLoggedIn }) {
   const [email, setEmail] = useState('admin@example.com')
-  const [password, setPassword] = useState('ChangeMe123!')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
   async function submit(event) {
@@ -31,7 +31,7 @@ function Login({ onLoggedIn }) {
   return (
     <main className="centered-page">
       <form className="card login-card" onSubmit={submit}>
-        <h1>Power BI Portal</h1>
+        <h1>LPG Shared Reports</h1>
         <label>
           Email
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
