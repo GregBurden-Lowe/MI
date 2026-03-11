@@ -33,20 +33,24 @@ function Login({ onLoggedIn }) {
   return (
     <main className="centered-page">
       <form className="card login-card" onSubmit={submit}>
-        <div className="login-brand">
-          <img src={logoSrc} alt="LPG Shared Reports" className="app-logo" />
+        <div className="login-layout">
+          <div className="login-brand-square">
+            <img src={logoSrc} alt="LPG Shared Reports" className="app-logo login-logo" />
+          </div>
+          <div className="login-fields">
+            <h1>LPG Shared Reports</h1>
+            <label>
+              Email
+              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+            </label>
+            <label>
+              Password
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+            </label>
+            {error && <p className="error">{error}</p>}
+            <button type="submit">Login</button>
+          </div>
         </div>
-        <h1>LPG Shared Reports</h1>
-        <label>
-          Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-        </label>
-        <label>
-          Password
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit">Login</button>
       </form>
     </main>
   )

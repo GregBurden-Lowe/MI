@@ -215,18 +215,35 @@ body {
 }
 
 .login-card {
-  width: min(420px, 100%);
+  width: min(760px, 100%);
   display: grid;
   gap: 0.75rem;
 }
 
-.login-brand {
+.login-layout {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.login-brand-square {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0.9rem 1rem;
+  aspect-ratio: 1;
+  width: 100%;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--brand-blue), var(--brand-blue-dark));
+}
+
+.login-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.login-fields h1 {
+  margin: 0;
 }
 
 .app-logo {
@@ -234,6 +251,10 @@ body {
   width: auto;
   height: 44px;
   max-width: 100%;
+}
+
+.login-logo {
+  height: 60px;
 }
 
 .header-logo {
@@ -577,6 +598,15 @@ button:hover {
   .topbar-brand {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand-square {
+    max-width: 180px;
+    margin: 0 auto;
   }
 
   .page-nav {
