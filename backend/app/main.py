@@ -61,6 +61,10 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)
+
+
 class ReportCreateRequest(BaseModel):
     name: str
     report_id: str
@@ -274,6 +278,25 @@ def update_user(
     user.last_name = payload.last_name
     user.email = payload.email
     user.role = payload.role
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {'user': serialize_user(user)}
+
+
+@app.post('/admin/users/{user_id}/reset-password')
+def reset_user_password(
+    user_id: int,
+    payload: AdminResetPasswordRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = True
     db.add(user)
     db.commit()
     db.refresh(user)

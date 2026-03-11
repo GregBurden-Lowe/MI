@@ -194,6 +194,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
   const [newUser, setNewUser] = useState(emptyUser)
   const [newReport, setNewReport] = useState(emptyReport)
   const [userDraft, setUserDraft] = useState(null)
+  const [passwordResetValue, setPasswordResetValue] = useState('')
   const [usersError, setUsersError] = useState('')
   const [usersSuccess, setUsersSuccess] = useState('')
   const [reportsError, setReportsError] = useState('')
@@ -201,6 +202,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
   const [accessError, setAccessError] = useState('')
   const [accessSuccess, setAccessSuccess] = useState('')
   const [savingUserId, setSavingUserId] = useState(null)
+  const [resettingPasswordUserId, setResettingPasswordUserId] = useState(null)
   const [creatingUser, setCreatingUser] = useState(false)
   const [creatingReport, setCreatingReport] = useState(false)
   const [deletingReportId, setDeletingReportId] = useState(null)
@@ -254,8 +256,10 @@ function AdminPanel({ reports, users, refreshAdmin }) {
         email: selectedUser.email ?? '',
         role: selectedUser.role ?? 'user'
       })
+      setPasswordResetValue('')
     } else {
       setUserDraft(null)
+      setPasswordResetValue('')
     }
   }, [selectedUser])
 
@@ -301,6 +305,24 @@ function AdminPanel({ reports, users, refreshAdmin }) {
       setUsersError(err.message)
     } finally {
       setSavingUserId(null)
+    }
+  }
+
+  async function resetUserPassword() {
+    if (!userDraft) return
+
+    setUsersError('')
+    setUsersSuccess('')
+    setResettingPasswordUserId(userDraft.id)
+    try {
+      await api.resetUserPassword(userDraft.id, passwordResetValue.trim())
+      setUsersSuccess('Password reset. The user must change it at next login.')
+      setPasswordResetValue('')
+      await refreshAdmin()
+    } catch (err) {
+      setUsersError(err.message)
+    } finally {
+      setResettingPasswordUserId(null)
     }
   }
 
@@ -541,6 +563,38 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                       <option value="admin">admin</option>
                     </select>
                   </label>
+                </div>
+                <div className="inset-section">
+                  <div className="admin-card-header">
+                    <div>
+                      <h4>Reset Password</h4>
+                      <p className="muted">Set a new temporary password and force a password change on the next login.</p>
+                    </div>
+                  </div>
+                  <div className="detail-grid detail-grid-tight">
+                    <label>
+                      Temporary password
+                      <input
+                        type="password"
+                        value={passwordResetValue}
+                        onChange={(e) => setPasswordResetValue(e.target.value)}
+                        minLength={8}
+                        placeholder="Minimum 8 characters"
+                      />
+                    </label>
+                  </div>
+                  <div className="detail-actions">
+                    <button
+                      type="button"
+                      onClick={resetUserPassword}
+                      disabled={!passwordResetValue.trim() || passwordResetValue.trim().length < 8 || resettingPasswordUserId === userDraft.id}
+                    >
+                      {resettingPasswordUserId === userDraft.id ? 'Resetting...' : 'Reset Password'}
+                    </button>
+                    <p className="muted">
+                      {selectedUser?.must_change_password ? 'This user is already required to change their password.' : 'Password reset has not been triggered yet.'}
+                    </p>
+                  </div>
                 </div>
                 {usersError && <p className="error inline-feedback">{usersError}</p>}
                 {usersSuccess && <p className="success inline-feedback">{usersSuccess}</p>}

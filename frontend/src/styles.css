@@ -434,6 +434,10 @@ button:hover {
   gap: 1rem;
 }
 
+.detail-grid-tight {
+  margin-top: 1rem;
+}
+
 .detail-actions {
   display: flex;
   justify-content: space-between;
