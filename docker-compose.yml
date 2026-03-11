@@ -1,0 +1,74 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+    container_name: reports-backend
+    restart: unless-stopped
+
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-720}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
+      CORS_ORIGIN: https://reports.lpgapps.work
+      COOKIE_SECURE: "true"
+
+    networks:
+      - web
+
+    labels:
+      - "traefik.enable=true"
+
+      # API routing
+      - "traefik.http.routers.reports-api.rule=Host(`reports.lpgapps.work`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.reports-api.entrypoints=websecure"
+      - "traefik.http.routers.reports-api.tls.certresolver=le"
+
+      # Backend port
+      - "traefik.http.services.reports-api.loadbalancer.server.port=8000"
+
+      # Strip /api before reaching FastAPI
+      - "traefik.http.middlewares.reports-strip.stripprefix.prefixes=/api"
+
+      # Apply middleware
+      - "traefik.http.routers.reports-api.middlewares=reports-strip,security@docker"
+
+      # Ensure API router wins over frontend router
+      - "traefik.http.routers.reports-api.priority=100"
+
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: /api
+
+    container_name: reports-frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    networks:
+      - web
+
+    labels:
+      - "traefik.enable=true"
+
+      # Frontend routing
+      - "traefik.http.routers.reports.rule=Host(`reports.lpgapps.work`)"
+      - "traefik.http.routers.reports.entrypoints=websecure"
+      - "traefik.http.routers.reports.tls.certresolver=le"
+
+      # Frontend port
+      - "traefik.http.services.reports.loadbalancer.server.port=80"
+
+      # Security middleware
+      - "traefik.http.routers.reports.middlewares=security@docker"
+
+
+networks:
+  web:
+    external: true
