@@ -44,15 +44,33 @@ function ReportEmbed({ report }) {
     []
   )
 
+  if (!report) return <p className="muted">Select a report to embed.</p>
+
+  // PUBLIC POWER BI (Publish to Web)
+  if (!report.embed_token) {
+    return (
+      <iframe
+        title={report.name}
+        src={report.embed_url}
+        width="100%"
+        height="900"
+        style={{ border: "none" }}
+        allowFullScreen
+      />
+    )
+  }
+
+  // SECURE POWER BI EMBED
   useEffect(() => {
-    if (!ref.current || !report) return
+    if (!ref.current) return
 
     powerbi.reset(ref.current)
+
     const embedConfig = {
       type: 'report',
       id: report.report_id,
       embedUrl: report.embed_url,
-      accessToken: report.embed_token || '',
+      accessToken: report.embed_token,
       tokenType: models.TokenType.Embed,
       settings: {
         panes: {
@@ -69,20 +87,6 @@ function ReportEmbed({ report }) {
     }
   }, [powerbi, report])
 
-  if (!report) return <p className="muted">Select a report to embed.</p>
-
- if (!report.embed_token) {
-  return (
-    <iframe
-      title={report.name}
-      src={report.embed_url}
-      width="100%"
-      height="900"
-      style={{ border: "none" }}
-      allowFullScreen
-    />
-  )
-}
   return <div ref={ref} className="embed-container" />
 }
 
@@ -190,7 +194,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
             required
           />
           <input
-            placeholder="embed_token (optional but required for embed)"
+            placeholder="embed_token (optional)"
             value={newReport.embed_token}
             onChange={(e) => setNewReport((v) => ({ ...v, embed_token: e.target.value }))}
           />
