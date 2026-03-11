@@ -71,16 +71,18 @@ function ReportEmbed({ report }) {
 
   if (!report) return <p className="muted">Select a report to embed.</p>
 
-  if (!report.embed_token) {
-    return (
-      <div className="card">
-        <p>
-          Report <strong>{report.name}</strong> has no embed token stored. Add an `embed_token` in admin report setup.
-        </p>
-      </div>
-    )
-  }
-
+ if (!report.embed_token) {
+  return (
+    <iframe
+      title={report.name}
+      src={report.embed_url}
+      width="100%"
+      height="900"
+      style={{ border: "none" }}
+      allowFullScreen
+    />
+  )
+}
   return <div ref={ref} className="embed-container" />
 }
 
