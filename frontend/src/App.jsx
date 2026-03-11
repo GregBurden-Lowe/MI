@@ -176,23 +176,94 @@ function ReportEmbed({ report }) {
   return <div ref={ref} className="embed-container" />
 }
 
+function formatUserName(user) {
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim()
+  return fullName || user?.email || 'Unnamed user'
+}
+
 function AdminPanel({ reports, users, refreshAdmin }) {
-  const [newUser, setNewUser] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'user' })
-  const [newReport, setNewReport] = useState({
-    name: '',
-    report_id: '',
-    embed_url: '',
-    embed_token: '',
-    dataset_id: '',
-    workspace_id: ''
-  })
-  const [error, setError] = useState('')
+  const emptyUser = { first_name: '', last_name: '', email: '', password: '', role: 'user' }
+  const emptyReport = { name: '', report_id: '', embed_url: '', embed_token: '', dataset_id: '', workspace_id: '' }
+  const [activeTab, setActiveTab] = useState('users')
+  const [userSearch, setUserSearch] = useState('')
+  const [accessSearch, setAccessSearch] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? null)
+  const [selectedAccessUserId, setSelectedAccessUserId] = useState(users[0]?.id ?? null)
+  const [showCreateUser, setShowCreateUser] = useState(false)
+  const [showAddReport, setShowAddReport] = useState(false)
+  const [newUser, setNewUser] = useState(emptyUser)
+  const [newReport, setNewReport] = useState(emptyReport)
+  const [userDraft, setUserDraft] = useState(null)
+  const [usersError, setUsersError] = useState('')
+  const [usersSuccess, setUsersSuccess] = useState('')
+  const [reportsError, setReportsError] = useState('')
+  const [reportsSuccess, setReportsSuccess] = useState('')
+  const [accessError, setAccessError] = useState('')
+  const [accessSuccess, setAccessSuccess] = useState('')
   const [savingUserId, setSavingUserId] = useState(null)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [creatingReport, setCreatingReport] = useState(false)
   const [deletingReportId, setDeletingReportId] = useState(null)
+  const [savingAccess, setSavingAccess] = useState(false)
+
+  const filteredUsers = users.filter((currentUser) => {
+    const query = userSearch.trim().toLowerCase()
+    if (!query) return true
+    return [currentUser.first_name, currentUser.last_name, currentUser.email, currentUser.role]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query))
+  })
+
+  const filteredAccessUsers = users.filter((currentUser) => {
+    const query = accessSearch.trim().toLowerCase()
+    if (!query) return true
+    return [currentUser.first_name, currentUser.last_name, currentUser.email]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query))
+  })
+
+  const selectedUser = users.find((currentUser) => currentUser.id === selectedUserId) ?? filteredUsers[0] ?? users[0] ?? null
+  const selectedAccessUser =
+    users.find((currentUser) => currentUser.id === selectedAccessUserId) ?? filteredAccessUsers[0] ?? users[0] ?? null
+
+  const assignedReportIds = new Set((selectedAccessUser?.report_access ?? []).map((report) => report.id))
+
+  useEffect(() => {
+    if (!users.length) {
+      setSelectedUserId(null)
+      setSelectedAccessUserId(null)
+      setUserDraft(null)
+      return
+    }
+
+    if (!users.some((currentUser) => currentUser.id === selectedUserId)) {
+      setSelectedUserId(users[0].id)
+    }
+
+    if (!users.some((currentUser) => currentUser.id === selectedAccessUserId)) {
+      setSelectedAccessUserId(users[0].id)
+    }
+  }, [users, selectedAccessUserId, selectedUserId])
+
+  useEffect(() => {
+    if (selectedUser) {
+      setUserDraft({
+        id: selectedUser.id,
+        first_name: selectedUser.first_name ?? '',
+        last_name: selectedUser.last_name ?? '',
+        email: selectedUser.email ?? '',
+        role: selectedUser.role ?? 'user'
+      })
+    } else {
+      setUserDraft(null)
+    }
+  }, [selectedUser])
 
   async function createUser(event) {
     event.preventDefault()
-    setError('')
+    setUsersError('')
+    setUsersSuccess('')
+    setCreatingUser(true)
     try {
       await api.createUser({
         ...newUser,
@@ -200,27 +271,62 @@ function AdminPanel({ reports, users, refreshAdmin }) {
         last_name: newUser.last_name.trim(),
         email: newUser.email.trim()
       })
-      setNewUser({ first_name: '', last_name: '', email: '', password: '', role: 'user' })
+      setNewUser(emptyUser)
+      setShowCreateUser(false)
+      setUsersSuccess('User created successfully.')
       await refreshAdmin()
     } catch (err) {
-      setError(err.message)
+      setUsersError(err.message)
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
+  async function saveUser() {
+    if (!userDraft) return
+
+    setUsersError('')
+    setUsersSuccess('')
+    setSavingUserId(userDraft.id)
+    try {
+      await api.updateUser(userDraft.id, {
+        first_name: userDraft.first_name.trim(),
+        last_name: userDraft.last_name.trim(),
+        email: userDraft.email.trim(),
+        role: userDraft.role
+      })
+      setUsersSuccess('User details saved.')
+      await refreshAdmin()
+    } catch (err) {
+      setUsersError(err.message)
+    } finally {
+      setSavingUserId(null)
     }
   }
 
   async function createReport(event) {
     event.preventDefault()
-    setError('')
+    setReportsError('')
+    setReportsSuccess('')
+    setCreatingReport(true)
     try {
       await api.createReport({
         ...newReport,
-        embed_token: newReport.embed_token || null,
-        dataset_id: newReport.dataset_id || null,
-        workspace_id: newReport.workspace_id || null
+        name: newReport.name.trim(),
+        report_id: newReport.report_id.trim(),
+        embed_url: newReport.embed_url.trim(),
+        embed_token: newReport.embed_token.trim() || null,
+        dataset_id: newReport.dataset_id.trim() || null,
+        workspace_id: newReport.workspace_id.trim() || null
       })
-      setNewReport({ name: '', report_id: '', embed_url: '', embed_token: '', dataset_id: '', workspace_id: '' })
+      setNewReport(emptyReport)
+      setShowAddReport(false)
+      setReportsSuccess('Report added successfully.')
       await refreshAdmin()
     } catch (err) {
-      setError(err.message)
+      setReportsError(err.message)
+    } finally {
+      setCreatingReport(false)
     }
   }
 
@@ -228,228 +334,434 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     const confirmed = window.confirm(`Delete report "${report.name}"?`)
     if (!confirmed) return
 
-    setError('')
+    setReportsError('')
+    setReportsSuccess('')
     setDeletingReportId(report.id)
     try {
       await api.deleteReport(report.id)
+      setReportsSuccess('Report deleted.')
       await refreshAdmin()
     } catch (err) {
-      setError(err.message)
+      setReportsError(err.message)
     } finally {
       setDeletingReportId(null)
     }
   }
 
-  async function toggleUserAccess(userId, reportId, checked, currentAccess) {
-    setError('')
-    const updated = new Set(currentAccess.map((r) => r.id))
+  async function toggleUserAccess(reportId, checked) {
+    if (!selectedAccessUser) return
+
+    setAccessError('')
+    setAccessSuccess('')
+    const updated = new Set(selectedAccessUser.report_access.map((report) => report.id))
     if (checked) updated.add(reportId)
     else updated.delete(reportId)
 
+    setSavingAccess(true)
     try {
-      await api.updateUserAccess(userId, Array.from(updated))
+      await api.updateUserAccess(selectedAccessUser.id, Array.from(updated))
+      setAccessSuccess('Report access updated.')
       await refreshAdmin()
     } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  async function updateUser(user) {
-    setError('')
-    setSavingUserId(user.id)
-    try {
-      await api.updateUser(user.id, {
-        first_name: user.first_name.trim(),
-        last_name: user.last_name.trim(),
-        email: user.email.trim(),
-        role: user.role
-      })
-      await refreshAdmin()
-    } catch (err) {
-      setError(err.message)
+      setAccessError(err.message)
     } finally {
-      setSavingUserId(null)
+      setSavingAccess(false)
     }
   }
-
-  function updateUserField(userId, field, value) {
-    refreshAdminState(userId, field, value)
-  }
-
-  function refreshAdminState(userId, field, value) {
-    const nextUsers = localUsers.map((user) => (user.id === userId ? { ...user, [field]: value } : user))
-    setLocalUsers(nextUsers)
-  }
-
-  const [localUsers, setLocalUsers] = useState(users)
-
-  useEffect(() => {
-    setLocalUsers(users)
-  }, [users])
 
   return (
-    <section className="admin-grid">
-      <div className="card">
-        <h3>Create User</h3>
-        <form onSubmit={createUser} className="stack">
-          <input
-            placeholder="first name"
-            value={newUser.first_name}
-            onChange={(e) => setNewUser((v) => ({ ...v, first_name: e.target.value }))}
-            minLength={1}
-            required
-          />
-          <input
-            placeholder="last name"
-            value={newUser.last_name}
-            onChange={(e) => setNewUser((v) => ({ ...v, last_name: e.target.value }))}
-            minLength={1}
-            required
-          />
-          <input
-            type="email"
-            placeholder="email"
-            value={newUser.email}
-            onChange={(e) => setNewUser((v) => ({ ...v, email: e.target.value }))}
-            required
-          />
-          <input
-            type="password"
-            placeholder="password"
-            value={newUser.password}
-            onChange={(e) => setNewUser((v) => ({ ...v, password: e.target.value }))}
-            required
-          />
-          <select value={newUser.role} onChange={(e) => setNewUser((v) => ({ ...v, role: e.target.value }))}>
-            <option value="user">user</option>
-            <option value="admin">admin</option>
-          </select>
-          <button type="submit">Create User</button>
-        </form>
-      </div>
-
-      <div className="card">
-        <h3>Add Report</h3>
-        <p className="muted">Leave embed_token blank for public &quot;Publish to Web&quot; reports (iframe).</p>
-        <form onSubmit={createReport} className="stack">
-          <input
-            placeholder="name"
-            value={newReport.name}
-            onChange={(e) => setNewReport((v) => ({ ...v, name: e.target.value }))}
-            required
-          />
-          <input
-            placeholder="report_id"
-            value={newReport.report_id}
-            onChange={(e) => setNewReport((v) => ({ ...v, report_id: e.target.value }))}
-            required
-          />
-          <input
-            placeholder="embed_url"
-            value={newReport.embed_url}
-            onChange={(e) => setNewReport((v) => ({ ...v, embed_url: e.target.value }))}
-            required
-          />
-          <input
-            placeholder="embed_token (optional)"
-            value={newReport.embed_token}
-            onChange={(e) => setNewReport((v) => ({ ...v, embed_token: e.target.value }))}
-          />
-          <input
-            placeholder="dataset_id (optional)"
-            value={newReport.dataset_id}
-            onChange={(e) => setNewReport((v) => ({ ...v, dataset_id: e.target.value }))}
-          />
-          <input
-            placeholder="workspace_id (optional)"
-            value={newReport.workspace_id}
-            onChange={(e) => setNewReport((v) => ({ ...v, workspace_id: e.target.value }))}
-          />
-          <button type="submit">Add Report</button>
-        </form>
-      </div>
-
-      <div className="card wide">
-        <h3>Manage Reports</h3>
-        {reports.length === 0 ? (
-          <p className="muted">No reports have been added yet.</p>
-        ) : (
-          <div className="report-admin-list">
-            {reports.map((report) => (
-              <div key={report.id} className="report-admin-row">
-                <div className="report-admin-meta">
-                  <strong>{report.name}</strong>
-                  <span className="muted">Report ID: {report.report_id}</span>
-                </div>
-                <button
-                  type="button"
-                  className="danger-btn"
-                  onClick={() => deleteReport(report)}
-                  disabled={deletingReportId === report.id}
-                >
-                  {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            ))}
+    <section className="admin-workspace">
+      <div className="card admin-overview">
+        <div>
+          <p className="section-kicker">Admin workspace</p>
+          <h3>Manage users, reports, and access without leaving the page.</h3>
+        </div>
+        <div className="admin-stats">
+          <div className="admin-stat">
+            <strong>{users.length}</strong>
+            <span>Users</span>
           </div>
-        )}
+          <div className="admin-stat">
+            <strong>{reports.length}</strong>
+            <span>Reports</span>
+          </div>
+        </div>
       </div>
 
-      <div className="card wide">
-        <h3>User Report Access</h3>
-        {localUsers.map((user) => (
-          <div key={user.id} className="user-access-row">
-            <div className="user-access-header">
-              <div className="user-identity-grid">
+      <div className="admin-tabs" role="tablist" aria-label="Admin views">
+        {[
+          ['users', 'Users'],
+          ['reports', 'Reports'],
+          ['access', 'Access']
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            className={activeTab === key ? 'admin-tab active' : 'admin-tab'}
+            aria-selected={activeTab === key}
+            onClick={() => setActiveTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'users' && (
+        <section className="admin-panel-grid">
+          <div className="card admin-sidebar-card">
+            <div className="admin-card-header">
+              <div>
+                <h3>Users</h3>
+                <p className="muted">Search, review, and select a user to edit.</p>
+              </div>
+              <button type="button" onClick={() => setShowCreateUser((current) => !current)}>
+                {showCreateUser ? 'Close' : 'New User'}
+              </button>
+            </div>
+
+            {showCreateUser && (
+              <form onSubmit={createUser} className="stack inset-section">
                 <input
                   placeholder="first name"
-                  value={user.first_name ?? ''}
-                  onChange={(e) => updateUserField(user.id, 'first_name', e.target.value)}
+                  value={newUser.first_name}
+                  onChange={(e) => setNewUser((current) => ({ ...current, first_name: e.target.value }))}
                   minLength={1}
                   required
                 />
                 <input
                   placeholder="last name"
-                  value={user.last_name ?? ''}
-                  onChange={(e) => updateUserField(user.id, 'last_name', e.target.value)}
+                  value={newUser.last_name}
+                  onChange={(e) => setNewUser((current) => ({ ...current, last_name: e.target.value }))}
                   minLength={1}
                   required
                 />
                 <input
                   type="email"
                   placeholder="email"
-                  value={user.email}
-                  onChange={(e) => updateUserField(user.id, 'email', e.target.value)}
+                  value={newUser.email}
+                  onChange={(e) => setNewUser((current) => ({ ...current, email: e.target.value }))}
+                  required
                 />
-                <select value={user.role} onChange={(e) => updateUserField(user.id, 'role', e.target.value)}>
+                <input
+                  type="password"
+                  placeholder="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser((current) => ({ ...current, password: e.target.value }))}
+                  minLength={8}
+                  required
+                />
+                <select value={newUser.role} onChange={(e) => setNewUser((current) => ({ ...current, role: e.target.value }))}>
                   <option value="user">user</option>
                   <option value="admin">admin</option>
                 </select>
-              </div>
-              <button type="button" onClick={() => updateUser(user)} disabled={savingUserId === user.id}>
-                {savingUserId === user.id ? 'Saving...' : 'Save User'}
-              </button>
-            </div>
-            <div className="checkbox-grid">
-              {reports.map((report) => {
-                const checked = user.report_access.some((r) => r.id === report.id)
-                return (
-                  <label key={`${user.id}-${report.id}`}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => toggleUserAccess(user.id, report.id, e.target.checked, user.report_access)}
-                    />
-                    {report.name}
-                  </label>
-                )
-              })}
+                {usersError && <p className="error inline-feedback">{usersError}</p>}
+                <div className="form-actions">
+                  <button type="submit" disabled={creatingUser}>{creatingUser ? 'Creating...' : 'Create User'}</button>
+                  <button type="button" className="secondary-btn" onClick={() => setShowCreateUser(false)}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            <input
+              type="search"
+              placeholder="Search users"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
+
+            <div className="admin-entity-list">
+              {filteredUsers.length === 0 ? (
+                <p className="muted">No users match your search.</p>
+              ) : (
+                filteredUsers.map((currentUser) => (
+                  <button
+                    key={currentUser.id}
+                    type="button"
+                    className={selectedUser?.id === currentUser.id ? 'entity-list-item active' : 'entity-list-item'}
+                    onClick={() => setSelectedUserId(currentUser.id)}
+                  >
+                    <strong>{formatUserName(currentUser)}</strong>
+                    <span>{currentUser.email}</span>
+                    <span className="entity-tag">{currentUser.role}</span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
-        ))}
-      </div>
 
-      {error && <p className="error">{error}</p>}
+          <div className="card admin-detail-card">
+            <div className="admin-card-header">
+              <div>
+                <h3>User Details</h3>
+                <p className="muted">Update profile details and role for the selected user.</p>
+              </div>
+            </div>
+
+            {!userDraft ? (
+              <p className="muted">Select a user to edit.</p>
+            ) : (
+              <>
+                <div className="detail-identity">
+                  <h4>{formatUserName(userDraft)}</h4>
+                  <span className="entity-tag">{userDraft.role}</span>
+                </div>
+                <div className="detail-grid">
+                  <label>
+                    First name
+                    <input
+                      value={userDraft.first_name}
+                      onChange={(e) => setUserDraft((current) => ({ ...current, first_name: e.target.value }))}
+                      minLength={1}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Last name
+                    <input
+                      value={userDraft.last_name}
+                      onChange={(e) => setUserDraft((current) => ({ ...current, last_name: e.target.value }))}
+                      minLength={1}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Email
+                    <input
+                      type="email"
+                      value={userDraft.email}
+                      onChange={(e) => setUserDraft((current) => ({ ...current, email: e.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Role
+                    <select value={userDraft.role} onChange={(e) => setUserDraft((current) => ({ ...current, role: e.target.value }))}>
+                      <option value="user">user</option>
+                      <option value="admin">admin</option>
+                    </select>
+                  </label>
+                </div>
+                {usersError && <p className="error inline-feedback">{usersError}</p>}
+                {usersSuccess && <p className="success inline-feedback">{usersSuccess}</p>}
+                <div className="detail-actions">
+                  <button type="button" onClick={saveUser} disabled={savingUserId === userDraft.id}>
+                    {savingUserId === userDraft.id ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <p className="muted">New users are still forced to change password on first login.</p>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'reports' && (
+        <section className="admin-panel-grid reports-layout">
+          <div className="card admin-sidebar-card">
+            <div className="admin-card-header">
+              <div>
+                <h3>Report Inventory</h3>
+                <p className="muted">Review the reports currently available in the portal.</p>
+              </div>
+              <button type="button" onClick={() => setShowAddReport((current) => !current)}>
+                {showAddReport ? 'Close' : 'Add Report'}
+              </button>
+            </div>
+
+            <div className="admin-entity-list">
+              {reports.length === 0 ? (
+                <p className="muted">No reports have been added yet.</p>
+              ) : (
+                reports.map((report) => (
+                  <div key={report.id} className="report-summary-card">
+                    <strong>{report.name}</strong>
+                    <span>Report ID: {report.report_id}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="card admin-detail-card">
+            {showAddReport && (
+              <form onSubmit={createReport} className="stack inset-section">
+                <div className="admin-card-header">
+                  <div>
+                    <h3>Add Report</h3>
+                    <p className="muted">Leave embed token blank for public publish-to-web reports.</p>
+                  </div>
+                </div>
+                <input
+                  placeholder="name"
+                  value={newReport.name}
+                  onChange={(e) => setNewReport((current) => ({ ...current, name: e.target.value }))}
+                  required
+                />
+                <input
+                  placeholder="report_id"
+                  value={newReport.report_id}
+                  onChange={(e) => setNewReport((current) => ({ ...current, report_id: e.target.value }))}
+                  required
+                />
+                <input
+                  placeholder="embed_url"
+                  value={newReport.embed_url}
+                  onChange={(e) => setNewReport((current) => ({ ...current, embed_url: e.target.value }))}
+                  required
+                />
+                <input
+                  placeholder="embed_token (optional)"
+                  value={newReport.embed_token}
+                  onChange={(e) => setNewReport((current) => ({ ...current, embed_token: e.target.value }))}
+                />
+                <div className="detail-grid">
+                  <label>
+                    Dataset ID
+                    <input
+                      placeholder="optional"
+                      value={newReport.dataset_id}
+                      onChange={(e) => setNewReport((current) => ({ ...current, dataset_id: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Workspace ID
+                    <input
+                      placeholder="optional"
+                      value={newReport.workspace_id}
+                      onChange={(e) => setNewReport((current) => ({ ...current, workspace_id: e.target.value }))}
+                    />
+                  </label>
+                </div>
+                {reportsError && <p className="error inline-feedback">{reportsError}</p>}
+                <div className="form-actions">
+                  <button type="submit" disabled={creatingReport}>{creatingReport ? 'Adding...' : 'Add Report'}</button>
+                  <button type="button" className="secondary-btn" onClick={() => setShowAddReport(false)}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            <div className="admin-card-header">
+              <div>
+                <h3>Manage Reports</h3>
+                <p className="muted">Delete unused reports and keep the catalog clean.</p>
+              </div>
+            </div>
+
+            {reportsSuccess && <p className="success inline-feedback">{reportsSuccess}</p>}
+            {reportsError && !showAddReport && <p className="error inline-feedback">{reportsError}</p>}
+
+            <div className="report-admin-list">
+              {reports.length === 0 ? (
+                <p className="muted">No reports have been added yet.</p>
+              ) : (
+                reports.map((report) => (
+                  <div key={report.id} className="report-admin-row">
+                    <div className="report-admin-meta">
+                      <strong>{report.name}</strong>
+                      <span className="muted">Report ID: {report.report_id}</span>
+                      <span className="muted report-url">{report.embed_url}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="danger-btn"
+                      onClick={() => deleteReport(report)}
+                      disabled={deletingReportId === report.id}
+                    >
+                      {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'access' && (
+        <section className="admin-panel-grid">
+          <div className="card admin-sidebar-card">
+            <div className="admin-card-header">
+              <div>
+                <h3>Access</h3>
+                <p className="muted">Choose one user, then manage their assigned reports.</p>
+              </div>
+            </div>
+
+            <input
+              type="search"
+              placeholder="Search users"
+              value={accessSearch}
+              onChange={(e) => setAccessSearch(e.target.value)}
+            />
+
+            <div className="admin-entity-list">
+              {filteredAccessUsers.length === 0 ? (
+                <p className="muted">No users match your search.</p>
+              ) : (
+                filteredAccessUsers.map((currentUser) => (
+                  <button
+                    key={currentUser.id}
+                    type="button"
+                    className={selectedAccessUser?.id === currentUser.id ? 'entity-list-item active' : 'entity-list-item'}
+                    onClick={() => setSelectedAccessUserId(currentUser.id)}
+                  >
+                    <strong>{formatUserName(currentUser)}</strong>
+                    <span>{currentUser.email}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="card admin-detail-card">
+            <div className="admin-card-header">
+              <div>
+                <h3>Assigned Reports</h3>
+                <p className="muted">
+                  {selectedAccessUser ? `Manage access for ${formatUserName(selectedAccessUser)}.` : 'Select a user to manage access.'}
+                </p>
+              </div>
+            </div>
+
+            {!selectedAccessUser ? (
+              <p className="muted">Select a user to manage report access.</p>
+            ) : reports.length === 0 ? (
+              <p className="muted">Add reports first before assigning access.</p>
+            ) : (
+              <>
+                <div className="assigned-report-summary">
+                  <span className="entity-tag">{selectedAccessUser.role}</span>
+                  <p className="muted">
+                    {assignedReportIds.size} of {reports.length} reports assigned
+                  </p>
+                </div>
+                {accessError && <p className="error inline-feedback">{accessError}</p>}
+                {accessSuccess && <p className="success inline-feedback">{accessSuccess}</p>}
+                <div className="access-checklist">
+                  {reports.map((report) => {
+                    const checked = assignedReportIds.has(report.id)
+                    return (
+                      <label key={`${selectedAccessUser.id}-${report.id}`} className={checked ? 'access-item active' : 'access-item'}>
+                        <div>
+                          <strong>{report.name}</strong>
+                          <span>Report ID: {report.report_id}</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={savingAccess}
+                          onChange={(e) => toggleUserAccess(report.id, e.target.checked)}
+                        />
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
     </section>
   )
 }
