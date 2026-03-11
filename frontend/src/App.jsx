@@ -601,15 +601,6 @@ export default function App() {
                 <p className="section-kicker">Shared report</p>
                 <h2>{selectedReport ? selectedReport.name : 'Embedded Report'}</h2>
               </div>
-              {!sidebarOpen && (
-                <button
-                  type="button"
-                  className="sidebar-toggle sidebar-toggle-inline"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  Browse reports
-                </button>
-              )}
             </div>
             <ReportEmbed report={selectedReport} />
           </section>
