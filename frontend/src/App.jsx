@@ -953,7 +953,7 @@ export default function App() {
         <div className="topbar-brand">
           <img src={logoSrc} alt="LPG Shared Reports" className="app-logo header-logo" />
           <div>
-          <h1>LPG Shared Reports</h1>
+          <h1>Shared Reports</h1>
           <p className="muted">
             Welcome {welcomeName || user.email}
           </p>
