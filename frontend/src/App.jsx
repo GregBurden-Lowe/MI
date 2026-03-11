@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { factories, models, service as pbiService } from 'powerbi-client'
 import { api } from './api'
 
+const logoSrc = `${import.meta.env.BASE_URL}LPG-Logo-White-Landscape-RBG.png`
+
 function getPageFromLocation() {
   return window.location.hash === '#/admin' ? 'admin' : 'reports'
 }
@@ -32,7 +34,7 @@ function Login({ onLoggedIn }) {
     <main className="centered-page">
       <form className="card login-card" onSubmit={submit}>
         <div className="login-brand">
-          <img src="/LPG-Logo-White-Landscape-RBG.png" alt="LPG Shared Reports" className="app-logo" />
+          <img src={logoSrc} alt="LPG Shared Reports" className="app-logo" />
         </div>
         <h1>LPG Shared Reports</h1>
         <label>
@@ -939,7 +941,7 @@ export default function App() {
     <main className="layout">
       <header className="topbar card">
         <div className="topbar-brand">
-          <img src="/LPG-Logo-White-Landscape-RBG.png" alt="LPG Shared Reports" className="app-logo header-logo" />
+          <img src={logoSrc} alt="LPG Shared Reports" className="app-logo header-logo" />
           <div>
           <h1>LPG Shared Reports</h1>
           <p className="muted">
