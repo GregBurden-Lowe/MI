@@ -254,6 +254,15 @@ button:hover {
   background: #cbd5e1;
 }
 
+.danger-btn {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.danger-btn:hover {
+  background: #991b1b;
+}
+
 .muted {
   color: #64748b;
   margin: 0.25rem 0;
@@ -282,6 +291,30 @@ button:hover {
   border-top: 1px solid #e2e8f0;
   padding-top: 0.6rem;
   margin-top: 0.6rem;
+}
+
+.report-admin-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.report-admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+}
+
+.report-admin-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.report-admin-meta {
+  display: grid;
+  gap: 0.2rem;
 }
 
 .user-access-header {
@@ -333,6 +366,11 @@ button:hover {
 
   .user-access-header {
     flex-direction: column;
+  }
+
+  .report-admin-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .user-identity-grid {

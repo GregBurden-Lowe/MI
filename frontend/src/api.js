@@ -36,6 +36,7 @@ export const api = {
   createUser: (payload) => request('/admin/users', { method: 'POST', body: JSON.stringify(payload) }),
   updateUser: (userId, payload) => request(`/admin/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) }),
   createReport: (payload) => request('/admin/reports', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteReport: (reportId) => request(`/admin/reports/${reportId}`, { method: 'DELETE' }),
   updateUserAccess: (userId, report_ids) =>
     request(`/admin/users/${userId}/report-access`, {
       method: 'PUT',

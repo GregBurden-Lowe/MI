@@ -188,6 +188,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
   })
   const [error, setError] = useState('')
   const [savingUserId, setSavingUserId] = useState(null)
+  const [deletingReportId, setDeletingReportId] = useState(null)
 
   async function createUser(event) {
     event.preventDefault()
@@ -220,6 +221,22 @@ function AdminPanel({ reports, users, refreshAdmin }) {
       await refreshAdmin()
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function deleteReport(report) {
+    const confirmed = window.confirm(`Delete report "${report.name}"?`)
+    if (!confirmed) return
+
+    setError('')
+    setDeletingReportId(report.id)
+    try {
+      await api.deleteReport(report.id)
+      await refreshAdmin()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeletingReportId(null)
     }
   }
 
@@ -350,6 +367,32 @@ function AdminPanel({ reports, users, refreshAdmin }) {
           />
           <button type="submit">Add Report</button>
         </form>
+      </div>
+
+      <div className="card wide">
+        <h3>Manage Reports</h3>
+        {reports.length === 0 ? (
+          <p className="muted">No reports have been added yet.</p>
+        ) : (
+          <div className="report-admin-list">
+            {reports.map((report) => (
+              <div key={report.id} className="report-admin-row">
+                <div className="report-admin-meta">
+                  <strong>{report.name}</strong>
+                  <span className="muted">Report ID: {report.report_id}</span>
+                </div>
+                <button
+                  type="button"
+                  className="danger-btn"
+                  onClick={() => deleteReport(report)}
+                  disabled={deletingReportId === report.id}
+                >
+                  {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card wide">

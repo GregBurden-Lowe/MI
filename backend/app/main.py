@@ -311,6 +311,17 @@ def create_report(payload: ReportCreateRequest, _admin: User = Depends(require_a
     }
 
 
+@app.delete('/admin/reports/{report_id}')
+def delete_report(report_id: int, _admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail='Report not found')
+
+    db.delete(report)
+    db.commit()
+    return {'ok': True, 'report_id': report_id}
+
+
 @app.put('/admin/users/{user_id}/report-access')
 def set_user_report_access(
     user_id: int,
