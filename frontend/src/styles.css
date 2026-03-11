@@ -246,6 +246,8 @@ body {
   display: grid;
   gap: 0.5rem;
   color: #f8fbff;
+  justify-items: center;
+  text-align: center;
 }
 
 .login-brand-copy h1 {
