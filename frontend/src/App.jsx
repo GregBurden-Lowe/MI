@@ -193,7 +193,12 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     event.preventDefault()
     setError('')
     try {
-      await api.createUser(newUser)
+      await api.createUser({
+        ...newUser,
+        first_name: newUser.first_name.trim(),
+        last_name: newUser.last_name.trim(),
+        email: newUser.email.trim()
+      })
       setNewUser({ first_name: '', last_name: '', email: '', password: '', role: 'user' })
       await refreshAdmin()
     } catch (err) {
@@ -237,9 +242,9 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     setSavingUserId(user.id)
     try {
       await api.updateUser(user.id, {
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
+        first_name: user.first_name.trim(),
+        last_name: user.last_name.trim(),
+        email: user.email.trim(),
         role: user.role
       })
       await refreshAdmin()
@@ -274,12 +279,14 @@ function AdminPanel({ reports, users, refreshAdmin }) {
             placeholder="first name"
             value={newUser.first_name}
             onChange={(e) => setNewUser((v) => ({ ...v, first_name: e.target.value }))}
+            minLength={1}
             required
           />
           <input
             placeholder="last name"
             value={newUser.last_name}
             onChange={(e) => setNewUser((v) => ({ ...v, last_name: e.target.value }))}
+            minLength={1}
             required
           />
           <input
@@ -355,11 +362,15 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                   placeholder="first name"
                   value={user.first_name ?? ''}
                   onChange={(e) => updateUserField(user.id, 'first_name', e.target.value)}
+                  minLength={1}
+                  required
                 />
                 <input
                   placeholder="last name"
                   value={user.last_name ?? ''}
                   onChange={(e) => updateUserField(user.id, 'last_name', e.target.value)}
+                  minLength={1}
+                  required
                 />
                 <input
                   type="email"

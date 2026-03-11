@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
 
@@ -32,12 +32,28 @@ class UserCreateRequest(BaseModel):
     password: str = Field(min_length=8)
     role: str = 'user'
 
+    @field_validator('first_name', 'last_name')
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError('Name fields cannot be blank')
+        return stripped
+
 
 class UserUpdateRequest(BaseModel):
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
     email: EmailStr
     role: str
+
+    @field_validator('first_name', 'last_name')
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError('Name fields cannot be blank')
+        return stripped
 
 
 class ChangePasswordRequest(BaseModel):
@@ -223,8 +239,8 @@ def create_user(payload: UserCreateRequest, _admin: User = Depends(require_admin
         raise HTTPException(status_code=409, detail='User already exists')
 
     user = User(
-        first_name=payload.first_name.strip(),
-        last_name=payload.last_name.strip(),
+        first_name=payload.first_name,
+        last_name=payload.last_name,
         email=payload.email,
         password_hash=hash_password(payload.password),
         role=payload.role,
@@ -254,8 +270,8 @@ def update_user(
     if exists:
         raise HTTPException(status_code=409, detail='User already exists')
 
-    user.first_name = payload.first_name.strip()
-    user.last_name = payload.last_name.strip()
+    user.first_name = payload.first_name
+    user.last_name = payload.last_name
     user.email = payload.email
     user.role = payload.role
     db.add(user)

@@ -9,7 +9,10 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || body.error || `Request failed: ${res.status}`)
+    const detail = Array.isArray(body.detail)
+      ? body.detail.map((item) => item.msg).join(', ')
+      : body.detail
+    throw new Error(detail || body.error || `Request failed: ${res.status}`)
   }
 
   return res.json().catch(() => ({}))
