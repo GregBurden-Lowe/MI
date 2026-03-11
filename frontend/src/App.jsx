@@ -564,6 +564,12 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                     </select>
                   </label>
                 </div>
+                <div className="detail-actions">
+                  <button type="button" onClick={saveUser} disabled={savingUserId === userDraft.id}>
+                    {savingUserId === userDraft.id ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <p className="muted">Update the profile details first, then use the password tools below if needed.</p>
+                </div>
                 <div className="inset-section">
                   <div className="admin-card-header">
                     <div>
@@ -598,12 +604,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                 </div>
                 {usersError && <p className="error inline-feedback">{usersError}</p>}
                 {usersSuccess && <p className="success inline-feedback">{usersSuccess}</p>}
-                <div className="detail-actions">
-                  <button type="button" onClick={saveUser} disabled={savingUserId === userDraft.id}>
-                    {savingUserId === userDraft.id ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <p className="muted">New users are still forced to change password on first login.</p>
-                </div>
+                <p className="muted">New users are still forced to change password on first login.</p>
               </>
             )}
           </div>
