@@ -46,21 +46,28 @@ function ReportEmbed({ report }) {
 
   if (!report) return <p className="muted">Select a report to embed.</p>
 
-  // PUBLIC POWER BI (Publish to Web)
-  if (!report.embed_token) {
+  const hasEmbedToken = report.embed_token != null && report.embed_token !== ''
+
+  // PUBLIC POWER BI (Publish to Web): no token, use iframe
+  if (!hasEmbedToken) {
+    if (report.embed_url) {
+      return (
+        <iframe
+          title={report.name}
+          src={report.embed_url}
+          width="100%"
+          height="900"
+          style={{ border: 'none' }}
+          allowFullScreen
+        />
+      )
+    }
     return (
-      <iframe
-        title={report.name}
-        src={report.embed_url}
-        width="100%"
-        height="900"
-        style={{ border: "none" }}
-        allowFullScreen
-      />
+      <p className="muted">Report &quot;{report.name}&quot; has no embed URL or token.</p>
     )
   }
 
-  // SECURE POWER BI EMBED
+  // SECURE POWER BI EMBED (powerbi-client)
   useEffect(() => {
     if (!ref.current) return
 
