@@ -41,6 +41,7 @@ export const api = {
       body: JSON.stringify({ new_password })
     }),
   createReport: (payload) => request('/admin/reports', { method: 'POST', body: JSON.stringify(payload) }),
+  updateReport: (reportId, payload) => request(`/admin/reports/${reportId}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteReport: (reportId) => request(`/admin/reports/${reportId}`, { method: 'DELETE' }),
   updateUserAccess: (userId, report_ids) =>
     request(`/admin/users/${userId}/report-access`, {

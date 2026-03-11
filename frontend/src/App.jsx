@@ -208,6 +208,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
   const [showAddReport, setShowAddReport] = useState(false)
   const [newUser, setNewUser] = useState(emptyUser)
   const [newReport, setNewReport] = useState(emptyReport)
+  const [editingReportId, setEditingReportId] = useState(null)
   const [userDraft, setUserDraft] = useState(null)
   const [passwordResetValue, setPasswordResetValue] = useState('')
   const [usersError, setUsersError] = useState('')
@@ -346,25 +347,53 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     setReportsError('')
     setReportsSuccess('')
     setCreatingReport(true)
+    const payload = {
+      ...newReport,
+      name: newReport.name.trim(),
+      report_id: newReport.report_id.trim(),
+      embed_url: newReport.embed_url.trim(),
+      embed_token: newReport.embed_token.trim() || null,
+      dataset_id: newReport.dataset_id.trim() || null,
+      workspace_id: newReport.workspace_id.trim() || null
+    }
     try {
-      await api.createReport({
-        ...newReport,
-        name: newReport.name.trim(),
-        report_id: newReport.report_id.trim(),
-        embed_url: newReport.embed_url.trim(),
-        embed_token: newReport.embed_token.trim() || null,
-        dataset_id: newReport.dataset_id.trim() || null,
-        workspace_id: newReport.workspace_id.trim() || null
-      })
+      if (editingReportId) {
+        await api.updateReport(editingReportId, payload)
+        setReportsSuccess('Report updated. Existing access has been preserved.')
+      } else {
+        await api.createReport(payload)
+        setReportsSuccess('Report added successfully.')
+      }
       setNewReport(emptyReport)
       setShowAddReport(false)
-      setReportsSuccess('Report added successfully.')
+      setEditingReportId(null)
       await refreshAdmin()
     } catch (err) {
       setReportsError(err.message)
     } finally {
       setCreatingReport(false)
     }
+  }
+
+  function beginEditReport(report) {
+    setReportsError('')
+    setReportsSuccess('')
+    setEditingReportId(report.id)
+    setNewReport({
+      name: report.name ?? '',
+      report_id: report.report_id ?? '',
+      embed_url: report.embed_url ?? '',
+      embed_token: report.embed_token ?? '',
+      dataset_id: report.dataset_id ?? '',
+      workspace_id: report.workspace_id ?? ''
+    })
+    setShowAddReport(true)
+  }
+
+  function cancelReportEditor() {
+    setShowAddReport(false)
+    setEditingReportId(null)
+    setNewReport(emptyReport)
   }
 
   async function deleteReport(report) {
@@ -634,7 +663,18 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                 <h3>Report Inventory</h3>
                 <p className="muted">Review the reports currently available in the portal.</p>
               </div>
-              <button type="button" onClick={() => setShowAddReport((current) => !current)}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (showAddReport) {
+                    cancelReportEditor()
+                    return
+                  }
+                  setEditingReportId(null)
+                  setNewReport(emptyReport)
+                  setShowAddReport(true)
+                }}
+              >
                 {showAddReport ? 'Close' : 'Add Report'}
               </button>
             </div>
@@ -659,7 +699,11 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                 <div className="admin-card-header">
                   <div>
                     <h3>Add Report</h3>
-                    <p className="muted">Leave embed token blank for public publish-to-web reports.</p>
+                    <p className="muted">
+                      {editingReportId
+                        ? 'Update the report details without changing existing user access.'
+                        : 'Leave embed token blank for public publish-to-web reports.'}
+                    </p>
                   </div>
                 </div>
                 <input
@@ -705,8 +749,10 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                 </div>
                 {reportsError && <p className="error inline-feedback">{reportsError}</p>}
                 <div className="form-actions">
-                  <button type="submit" disabled={creatingReport}>{creatingReport ? 'Adding...' : 'Add Report'}</button>
-                  <button type="button" className="secondary-btn" onClick={() => setShowAddReport(false)}>Cancel</button>
+                  <button type="submit" disabled={creatingReport}>
+                    {creatingReport ? (editingReportId ? 'Saving...' : 'Adding...') : (editingReportId ? 'Save Report' : 'Add Report')}
+                  </button>
+                  <button type="button" className="secondary-btn" onClick={cancelReportEditor}>Cancel</button>
                 </div>
               </form>
             )}
@@ -732,14 +778,19 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                       <span className="muted">Report ID: {report.report_id}</span>
                       <span className="muted report-url">{report.embed_url}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="danger-btn"
-                      onClick={() => deleteReport(report)}
-                      disabled={deletingReportId === report.id}
-                    >
-                      {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                    <div className="report-row-actions">
+                      <button type="button" className="secondary-btn" onClick={() => beginEditReport(report)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="danger-btn"
+                        onClick={() => deleteReport(report)}
+                        disabled={deletingReportId === report.id}
+                      >
+                        {deletingReportId === report.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

@@ -78,6 +78,18 @@ class ReportAccessUpdateRequest(BaseModel):
     report_ids: list[int]
 
 
+def serialize_report(report: Report) -> dict:
+    return {
+        'id': report.id,
+        'name': report.name,
+        'report_id': report.report_id,
+        'embed_url': report.embed_url,
+        'embed_token': report.embed_token,
+        'dataset_id': report.dataset_id,
+        'workspace_id': report.workspace_id,
+    }
+
+
 def serialize_user(user: User) -> dict:
     return {
         'id': user.id,
@@ -200,16 +212,7 @@ def list_reports(user: User = Depends(get_current_user), db: Session = Depends(g
 
     return {
         'reports': [
-            {
-                'id': r.id,
-                'name': r.name,
-                'report_id': r.report_id,
-                'embed_url': r.embed_url,
-                'embed_token': r.embed_token,
-                'dataset_id': r.dataset_id,
-                'workspace_id': r.workspace_id,
-            }
-            for r in reports
+            serialize_report(r) for r in reports
         ]
     }
 
@@ -329,17 +332,34 @@ def create_report(payload: ReportCreateRequest, _admin: User = Depends(require_a
     db.commit()
     db.refresh(report)
 
-    return {
-        'report': {
-            'id': report.id,
-            'name': report.name,
-            'report_id': report.report_id,
-            'embed_url': report.embed_url,
-            'embed_token': report.embed_token,
-            'dataset_id': report.dataset_id,
-            'workspace_id': report.workspace_id,
-        }
-    }
+    return {'report': serialize_report(report)}
+
+
+@app.put('/admin/reports/{report_id}')
+def update_report(
+    report_id: int,
+    payload: ReportCreateRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail='Report not found')
+
+    exists = db.scalar(select(Report).where(Report.report_id == payload.report_id, Report.id != report_id))
+    if exists:
+        raise HTTPException(status_code=409, detail='Report already exists')
+
+    report.name = payload.name
+    report.report_id = payload.report_id
+    report.embed_url = payload.embed_url
+    report.embed_token = payload.embed_token
+    report.dataset_id = payload.dataset_id
+    report.workspace_id = payload.workspace_id
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return {'report': serialize_report(report)}
 
 
 @app.delete('/admin/reports/{report_id}')

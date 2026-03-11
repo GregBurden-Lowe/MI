@@ -580,6 +580,12 @@ button:hover {
   gap: 0.2rem;
 }
 
+.report-row-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .report-url {
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -674,6 +680,11 @@ button:hover {
   }
 
   .report-admin-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .report-row-actions {
     flex-direction: column;
     align-items: stretch;
   }
