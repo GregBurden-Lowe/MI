@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
 
 from .auth import COOKIE_NAME, create_access_token, get_current_user, hash_password, require_admin, verify_password
@@ -26,9 +26,23 @@ class LoginRequest(BaseModel):
 
 
 class UserCreateRequest(BaseModel):
+    first_name: str = Field(min_length=1)
+    last_name: str = Field(min_length=1)
     email: EmailStr
     password: str = Field(min_length=8)
     role: str = 'user'
+
+
+class UserUpdateRequest(BaseModel):
+    first_name: str = Field(min_length=1)
+    last_name: str = Field(min_length=1)
+    email: EmailStr
+    role: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
 
 
 class ReportCreateRequest(BaseModel):
@@ -44,16 +58,56 @@ class ReportAccessUpdateRequest(BaseModel):
     report_ids: list[int]
 
 
+def serialize_user(user: User) -> dict:
+    return {
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'role': user.role,
+        'must_change_password': user.must_change_password,
+    }
+
+
+def ensure_schema() -> None:
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+
+    user_columns = {column['name'] for column in inspector.get_columns('users')}
+    if 'first_name' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN first_name VARCHAR(255) NOT NULL DEFAULT ''")
+            )
+    if 'last_name' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN last_name VARCHAR(255) NOT NULL DEFAULT ''")
+            )
+    if 'must_change_password' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    'ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE'
+                )
+            )
+
+
 @app.on_event('startup')
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     with SessionLocal() as db:
         existing = db.scalar(select(User).where(User.email == settings.admin_email))
         if not existing:
             admin = User(
+                first_name='Admin',
+                last_name='User',
                 email=settings.admin_email,
                 password_hash=hash_password(settings.admin_password),
                 role='admin',
+                must_change_password=False,
             )
             db.add(admin)
             db.commit()
@@ -75,7 +129,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
         max_age=settings.jwt_expire_minutes * 60,
     )
 
-    return {'user': {'id': user.id, 'email': user.email, 'role': user.role}}
+    return {'user': serialize_user(user)}
 
 
 @app.post('/auth/logout')
@@ -86,7 +140,24 @@ def logout(response: Response, _user: User = Depends(get_current_user)):
 
 @app.get('/auth/me')
 def me(user: User = Depends(get_current_user)):
-    return {'user': {'id': user.id, 'email': user.email, 'role': user.role}}
+    return {'user': serialize_user(user)}
+
+
+@app.post('/auth/change-password')
+def change_password(
+    payload: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Current password is incorrect')
+
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {'user': serialize_user(user)}
 
 
 @app.get('/reports')
@@ -131,8 +202,11 @@ def list_users(_admin: User = Depends(require_admin), db: Session = Depends(get_
         result.append(
             {
                 'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
                 'email': user.email,
                 'role': user.role,
+                'must_change_password': user.must_change_password,
                 'report_access': [{'id': r.id, 'name': r.name} for r in access_rows],
             }
         )
@@ -148,11 +222,46 @@ def create_user(payload: UserCreateRequest, _admin: User = Depends(require_admin
     if exists:
         raise HTTPException(status_code=409, detail='User already exists')
 
-    user = User(email=payload.email, password_hash=hash_password(payload.password), role=payload.role)
+    user = User(
+        first_name=payload.first_name.strip(),
+        last_name=payload.last_name.strip(),
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        role=payload.role,
+        must_change_password=True,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {'user': {'id': user.id, 'email': user.email, 'role': user.role}}
+    return {'user': serialize_user(user)}
+
+
+@app.put('/admin/users/{user_id}')
+def update_user(
+    user_id: int,
+    payload: UserUpdateRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    if payload.role not in ('admin', 'user'):
+        raise HTTPException(status_code=400, detail='Role must be admin or user')
+
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+
+    exists = db.scalar(select(User).where(User.email == payload.email, User.id != user_id))
+    if exists:
+        raise HTTPException(status_code=409, detail='User already exists')
+
+    user.first_name = payload.first_name.strip()
+    user.last_name = payload.last_name.strip()
+    user.email = payload.email
+    user.role = payload.role
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {'user': serialize_user(user)}
 
 
 @app.post('/admin/reports', status_code=201)

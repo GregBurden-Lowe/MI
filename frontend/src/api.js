@@ -21,11 +21,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password })
     }),
+  changePassword: (current_password, new_password) =>
+    request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password })
+    }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
   reports: () => request('/reports'),
   adminUsers: () => request('/admin/users'),
   createUser: (payload) => request('/admin/users', { method: 'POST', body: JSON.stringify(payload) }),
+  updateUser: (userId, payload) => request(`/admin/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) }),
   createReport: (payload) => request('/admin/reports', { method: 'POST', body: JSON.stringify(payload) }),
   updateUserAccess: (userId, report_ids) =>
     request(`/admin/users/${userId}/report-access`, {

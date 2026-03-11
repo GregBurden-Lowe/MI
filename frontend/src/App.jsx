@@ -2,6 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { factories, models, service as pbiService } from 'powerbi-client'
 import { api } from './api'
 
+function getPageFromLocation() {
+  return window.location.hash === '#/admin' ? 'admin' : 'reports'
+}
+
+function navigateTo(page) {
+  const nextHash = page === 'admin' ? '#/admin' : '#/'
+  if (window.location.hash === nextHash) return
+  window.location.hash = nextHash
+}
+
 function Login({ onLoggedIn }) {
   const [email, setEmail] = useState('admin@example.com')
   const [password, setPassword] = useState('ChangeMe123!')
@@ -32,6 +42,73 @@ function Login({ onLoggedIn }) {
         </label>
         {error && <p className="error">{error}</p>}
         <button type="submit">Login</button>
+      </form>
+    </main>
+  )
+}
+
+function PasswordChangeGate({ user, onPasswordChanged, onLogout }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submit(event) {
+    event.preventDefault()
+    setError('')
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const data = await api.changePassword(currentPassword, newPassword)
+      onPasswordChanged(data.user)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <main className="centered-page">
+      <form className="card login-card" onSubmit={submit}>
+        <h1>Change Password</h1>
+        <p className="muted">
+          {user.email} must set a new password before continuing.
+        </p>
+        <label>
+          Current Password
+          <input
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            type="password"
+            required
+          />
+        </label>
+        <label>
+          New Password
+          <input value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" minLength={8} required />
+        </label>
+        <label>
+          Confirm New Password
+          <input
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            type="password"
+            minLength={8}
+            required
+          />
+        </label>
+        {error && <p className="error">{error}</p>}
+        <div className="form-actions">
+          <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Update Password'}</button>
+          <button type="button" className="secondary-btn" onClick={onLogout}>Logout</button>
+        </div>
       </form>
     </main>
   )
@@ -100,7 +177,7 @@ function ReportEmbed({ report }) {
 }
 
 function AdminPanel({ reports, users, refreshAdmin }) {
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'user' })
+  const [newUser, setNewUser] = useState({ first_name: '', last_name: '', email: '', password: '', role: 'user' })
   const [newReport, setNewReport] = useState({
     name: '',
     report_id: '',
@@ -110,13 +187,14 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     workspace_id: ''
   })
   const [error, setError] = useState('')
+  const [savingUserId, setSavingUserId] = useState(null)
 
   async function createUser(event) {
     event.preventDefault()
     setError('')
     try {
       await api.createUser(newUser)
-      setNewUser({ email: '', password: '', role: 'user' })
+      setNewUser({ first_name: '', last_name: '', email: '', password: '', role: 'user' })
       await refreshAdmin()
     } catch (err) {
       setError(err.message)
@@ -154,11 +232,56 @@ function AdminPanel({ reports, users, refreshAdmin }) {
     }
   }
 
+  async function updateUser(user) {
+    setError('')
+    setSavingUserId(user.id)
+    try {
+      await api.updateUser(user.id, {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        role: user.role
+      })
+      await refreshAdmin()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingUserId(null)
+    }
+  }
+
+  function updateUserField(userId, field, value) {
+    refreshAdminState(userId, field, value)
+  }
+
+  function refreshAdminState(userId, field, value) {
+    const nextUsers = localUsers.map((user) => (user.id === userId ? { ...user, [field]: value } : user))
+    setLocalUsers(nextUsers)
+  }
+
+  const [localUsers, setLocalUsers] = useState(users)
+
+  useEffect(() => {
+    setLocalUsers(users)
+  }, [users])
+
   return (
     <section className="admin-grid">
       <div className="card">
         <h3>Create User</h3>
         <form onSubmit={createUser} className="stack">
+          <input
+            placeholder="first name"
+            value={newUser.first_name}
+            onChange={(e) => setNewUser((v) => ({ ...v, first_name: e.target.value }))}
+            required
+          />
+          <input
+            placeholder="last name"
+            value={newUser.last_name}
+            onChange={(e) => setNewUser((v) => ({ ...v, last_name: e.target.value }))}
+            required
+          />
           <input
             type="email"
             placeholder="email"
@@ -224,10 +347,34 @@ function AdminPanel({ reports, users, refreshAdmin }) {
 
       <div className="card wide">
         <h3>User Report Access</h3>
-        {users.map((user) => (
+        {localUsers.map((user) => (
           <div key={user.id} className="user-access-row">
-            <div>
-              <strong>{user.email}</strong> ({user.role})
+            <div className="user-access-header">
+              <div className="user-identity-grid">
+                <input
+                  placeholder="first name"
+                  value={user.first_name ?? ''}
+                  onChange={(e) => updateUserField(user.id, 'first_name', e.target.value)}
+                />
+                <input
+                  placeholder="last name"
+                  value={user.last_name ?? ''}
+                  onChange={(e) => updateUserField(user.id, 'last_name', e.target.value)}
+                />
+                <input
+                  type="email"
+                  placeholder="email"
+                  value={user.email}
+                  onChange={(e) => updateUserField(user.id, 'email', e.target.value)}
+                />
+                <select value={user.role} onChange={(e) => updateUserField(user.id, 'role', e.target.value)}>
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+              <button type="button" onClick={() => updateUser(user)} disabled={savingUserId === user.id}>
+                {savingUserId === user.id ? 'Saving...' : 'Save User'}
+              </button>
             </div>
             <div className="checkbox-grid">
               {reports.map((report) => {
@@ -259,6 +406,25 @@ export default function App() {
   const [users, setUsers] = useState([])
   const [selectedReportId, setSelectedReportId] = useState(null)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(getPageFromLocation)
+
+  async function loadAuthenticatedApp(currentUser) {
+    setError('')
+    if (currentUser.must_change_password) {
+      setReports([])
+      setUsers([])
+      setSelectedReportId(null)
+      return
+    }
+
+    await refreshReports()
+    if (currentUser.role === 'admin') {
+      const data = await api.adminUsers()
+      setUsers(data.users)
+    } else {
+      setUsers([])
+    }
+  }
 
   async function refreshReports() {
     const data = await api.reports()
@@ -279,17 +445,30 @@ export default function App() {
       try {
         const me = await api.me()
         setUser(me.user)
-        await refreshReports()
-        if (me.user.role === 'admin') {
-          const data = await api.adminUsers()
-          setUsers(data.users)
-        }
+        await loadAuthenticatedApp(me.user)
       } catch {
         setUser(null)
       }
     }
     bootstrap()
   }, [])
+
+  useEffect(() => {
+    function syncPage() {
+      setPage(getPageFromLocation())
+    }
+
+    window.addEventListener('hashchange', syncPage)
+    syncPage()
+
+    return () => window.removeEventListener('hashchange', syncPage)
+  }, [])
+
+  useEffect(() => {
+    if (page === 'admin' && user?.role !== 'admin') {
+      navigateTo('reports')
+    }
+  }, [page, user])
 
   async function logout() {
     await api.logout()
@@ -302,55 +481,99 @@ export default function App() {
   if (!user) {
     return <Login onLoggedIn={async (loggedInUser) => {
       setUser(loggedInUser)
-      setError('')
       try {
-        await refreshReports()
-        if (loggedInUser.role === 'admin') {
-          const data = await api.adminUsers()
-          setUsers(data.users)
-        }
+        await loadAuthenticatedApp(loggedInUser)
       } catch (err) {
         setError(err.message)
       }
     }} />
   }
 
+  if (user.must_change_password) {
+    return (
+      <PasswordChangeGate
+        user={user}
+        onLogout={logout}
+        onPasswordChanged={async (updatedUser) => {
+          setUser(updatedUser)
+          try {
+            await loadAuthenticatedApp(updatedUser)
+          } catch (err) {
+            setError(err.message)
+          }
+        }}
+      />
+    )
+  }
+
   const selectedReport = reports.find((r) => r.id === selectedReportId) || null
+  const isAdminPage = page === 'admin' && user.role === 'admin'
+  const welcomeName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
 
   return (
     <main className="layout">
       <header className="topbar card">
         <div>
-          <h1>Power BI Portal</h1>
-          <p className="muted">{user.email} ({user.role})</p>
+          <h1>LPG Shared Reports</h1>
+          <p className="muted">
+            Welcome {welcomeName || user.email}
+          </p>
         </div>
-        <button onClick={logout}>Logout</button>
+        <div className="topbar-actions">
+          <nav className="page-nav" aria-label="Primary">
+            <button
+              className={isAdminPage ? 'nav-btn' : 'nav-btn active'}
+              onClick={() => navigateTo('reports')}
+              type="button"
+            >
+              Reports
+            </button>
+            {user.role === 'admin' && (
+              <button
+                className={isAdminPage ? 'nav-btn active' : 'nav-btn'}
+                onClick={() => navigateTo('admin')}
+                type="button"
+              >
+                Admin
+              </button>
+            )}
+          </nav>
+          <button onClick={logout}>Logout</button>
+        </div>
       </header>
 
       {error && <p className="error">{error}</p>}
 
-      <section className="content-grid">
-        <aside className="card report-list">
-          <h2>Reports</h2>
-          {reports.length === 0 && <p className="muted">No reports available for your account.</p>}
-          {reports.map((report) => (
-            <button
-              className={report.id === selectedReportId ? 'report-btn active' : 'report-btn'}
-              key={report.id}
-              onClick={() => setSelectedReportId(report.id)}
-            >
-              {report.name}
-            </button>
-          ))}
-        </aside>
-
-        <section className="card embed-area">
-          <h2>{selectedReport ? selectedReport.name : 'Embedded Report'}</h2>
-          <ReportEmbed report={selectedReport} />
+      {isAdminPage ? (
+        <section className="page-section">
+          <div className="card page-header">
+            <h2>Admin</h2>
+            <p className="muted">Manage users, reports, and report access separately from the main viewing experience.</p>
+          </div>
+          <AdminPanel reports={reports} users={users} refreshAdmin={refreshAdmin} />
         </section>
-      </section>
+      ) : (
+        <section className="content-grid">
+          <aside className="card report-list">
+            <h2>Reports</h2>
+            {reports.length === 0 && <p className="muted">No reports available for your account.</p>}
+            {reports.map((report) => (
+              <button
+                className={report.id === selectedReportId ? 'report-btn active' : 'report-btn'}
+                key={report.id}
+                onClick={() => setSelectedReportId(report.id)}
+              >
+                {report.name}
+              </button>
+            ))}
+          </aside>
 
-      {user.role === 'admin' && <AdminPanel reports={reports} users={users} refreshAdmin={refreshAdmin} />}
+          <section className="card embed-area">
+            <h2>{selectedReport ? selectedReport.name : 'Embedded Report'}</h2>
+            <ReportEmbed report={selectedReport} />
+          </section>
+        </section>
+      )}
     </main>
   )
 }
