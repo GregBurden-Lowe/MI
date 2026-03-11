@@ -250,7 +250,7 @@ body {
 
 .login-brand-copy h1 {
   margin: 0;
-  font-size: clamp(2rem, 3vw, 3rem);
+  font-size: clamp(1.4rem, 2.2vw, 2.2rem);
   line-height: 1.05;
 }
 
@@ -293,7 +293,7 @@ body {
 
 .login-logo {
   height: auto;
-  width: min(100%, 360px);
+  width: min(100%, 430px);
   max-width: 100%;
 }
 
