@@ -37,7 +37,7 @@ function Login({ onLoggedIn }) {
           <div className="login-brand-panel">
             <img src={logoSrc} alt="LPG Shared Reports" className="app-logo login-logo" />
             <div className="login-brand-copy">
-              <h1>LPG Shared Reports</h1>
+              <h1>Shared Reports</h1>
               <p>Secure access to shared embedded reports.</p>
             </div>
           </div>
