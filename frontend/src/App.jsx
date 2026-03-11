@@ -34,11 +34,18 @@ function Login({ onLoggedIn }) {
     <main className="centered-page">
       <form className="card login-card" onSubmit={submit}>
         <div className="login-layout">
-          <div className="login-brand-square">
+          <div className="login-brand-panel">
             <img src={logoSrc} alt="LPG Shared Reports" className="app-logo login-logo" />
+            <div className="login-brand-copy">
+              <h1>LPG Shared Reports</h1>
+              <p>Secure access to shared embedded reports.</p>
+            </div>
           </div>
           <div className="login-fields">
-            <h1>LPG Shared Reports</h1>
+            <div className="login-form-header">
+              <span className="login-form-kicker">Sign in</span>
+              <p className="muted">Sign in to use LPG Shared Reports.</p>
+            </div>
             <label>
               Email
               <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
@@ -48,7 +55,7 @@ function Login({ onLoggedIn }) {
               <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
             </label>
             {error && <p className="error">{error}</p>}
-            <button type="submit">Login</button>
+            <button type="submit">Sign in</button>
           </div>
         </div>
       </form>
