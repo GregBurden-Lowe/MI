@@ -31,6 +31,9 @@ function Login({ onLoggedIn }) {
   return (
     <main className="centered-page">
       <form className="card login-card" onSubmit={submit}>
+        <div className="login-brand">
+          <img src="/LPG-Logo-White-Landscape-RBG.png" alt="LPG Shared Reports" className="app-logo" />
+        </div>
         <h1>LPG Shared Reports</h1>
         <label>
           Email
@@ -935,11 +938,14 @@ export default function App() {
   return (
     <main className="layout">
       <header className="topbar card">
-        <div>
+        <div className="topbar-brand">
+          <img src="/LPG-Logo-White-Landscape-RBG.png" alt="LPG Shared Reports" className="app-logo header-logo" />
+          <div>
           <h1>LPG Shared Reports</h1>
           <p className="muted">
             Welcome {welcomeName || user.email}
           </p>
+          </div>
         </div>
         <div className="topbar-actions">
           <nav className="page-nav" aria-label="Primary">

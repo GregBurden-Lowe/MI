@@ -50,6 +50,12 @@ body {
   margin: 0;
 }
 
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .topbar .muted {
   color: var(--brand-blue-light);
 }
@@ -212,6 +218,26 @@ body {
   width: min(420px, 100%);
   display: grid;
   gap: 0.75rem;
+}
+
+.login-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-blue-dark));
+}
+
+.app-logo {
+  display: block;
+  width: auto;
+  height: 44px;
+  max-width: 100%;
+}
+
+.header-logo {
+  height: 38px;
 }
 
 label,
@@ -546,6 +572,11 @@ button:hover {
   .topbar-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .topbar-brand {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .page-nav {
