@@ -749,29 +749,6 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                   onChange={(e) => setNewReport((current) => ({ ...current, embed_url: e.target.value }))}
                   required
                 />
-                <input
-                  placeholder="embed_token (optional)"
-                  value={newReport.embed_token}
-                  onChange={(e) => setNewReport((current) => ({ ...current, embed_token: e.target.value }))}
-                />
-                <div className="detail-grid">
-                  <label>
-                    Dataset ID
-                    <input
-                      placeholder="optional"
-                      value={newReport.dataset_id}
-                      onChange={(e) => setNewReport((current) => ({ ...current, dataset_id: e.target.value }))}
-                    />
-                  </label>
-                  <label>
-                    Workspace ID
-                    <input
-                      placeholder="optional"
-                      value={newReport.workspace_id}
-                      onChange={(e) => setNewReport((current) => ({ ...current, workspace_id: e.target.value }))}
-                    />
-                  </label>
-                </div>
                 {reportsError && <p className="error inline-feedback">{reportsError}</p>}
                 <div className="form-actions">
                   <button type="submit" disabled={creatingReport}>
