@@ -211,6 +211,7 @@ function AdminPanel({ reports, users, refreshAdmin }) {
   const [editingReportId, setEditingReportId] = useState(null)
   const [userDraft, setUserDraft] = useState(null)
   const [passwordResetValue, setPasswordResetValue] = useState('')
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false)
   const [usersError, setUsersError] = useState('')
   const [usersSuccess, setUsersSuccess] = useState('')
   const [reportsError, setReportsError] = useState('')
@@ -509,14 +510,24 @@ function AdminPanel({ reports, users, refreshAdmin }) {
                   onChange={(e) => setNewUser((current) => ({ ...current, email: e.target.value }))}
                   required
                 />
-                <input
-                  type="password"
-                  placeholder="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser((current) => ({ ...current, password: e.target.value }))}
-                  minLength={8}
-                  required
-                />
+                <div className="password-field">
+                  <input
+                    type={showNewUserPassword ? 'text' : 'password'}
+                    placeholder="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser((current) => ({ ...current, password: e.target.value }))}
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="field-toggle"
+                    onClick={() => setShowNewUserPassword((current) => !current)}
+                    aria-label={showNewUserPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewUserPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 <select value={newUser.role} onChange={(e) => setNewUser((current) => ({ ...current, role: e.target.value }))}>
                   <option value="user">user</option>
                   <option value="admin">admin</option>

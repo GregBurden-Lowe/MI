@@ -318,6 +318,24 @@ button {
   font: inherit;
 }
 
+.password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field-toggle {
+  background: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.field-toggle:hover {
+  background: #cbd5e1;
+}
+
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
