@@ -32,7 +32,7 @@ function Login({ onLoggedIn }) {
 
   return (
     <main className="centered-page">
-      <form className="card login-card" onSubmit={submit}>
+      <form className="card login-card" onSubmit={submit} autoComplete="on">
         <div className="login-layout">
           <div className="login-brand-panel">
             <img src={logoSrc} alt="Insight" className="app-logo login-logo" />
@@ -47,11 +47,25 @@ function Login({ onLoggedIn }) {
             </div>
             <label>
               Email
-              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                name="email"
+                autoComplete="username"
+                required
+              />
             </label>
             <label>
               Password
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+              />
             </label>
             {error && <p className="error">{error}</p>}
             <button type="submit">Sign in</button>
