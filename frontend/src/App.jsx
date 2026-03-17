@@ -35,15 +35,15 @@ function Login({ onLoggedIn }) {
       <form className="card login-card" onSubmit={submit}>
         <div className="login-layout">
           <div className="login-brand-panel">
-            <img src={logoSrc} alt="LPG Shared Reports" className="app-logo login-logo" />
+            <img src={logoSrc} alt="Insight" className="app-logo login-logo" />
             <div className="login-brand-copy">
-              <h1>Shared Reports</h1>
+              <h1>Insight</h1>
             </div>
           </div>
           <div className="login-fields">
             <div className="login-form-header">
               <span className="login-form-kicker">Sign in</span>
-              <p className="muted">Sign in to use LPG Shared Reports.</p>
+              <p className="muted">Sign in to use Insight.</p>
             </div>
             <label>
               Email
@@ -1002,9 +1002,9 @@ export default function App() {
     <main className="layout">
       <header className="topbar card">
         <div className="topbar-brand">
-          <img src={logoSrc} alt="LPG Shared Reports" className="app-logo header-logo" />
+          <img src={logoSrc} alt="Insight" className="app-logo header-logo" />
           <div>
-          <h1>Shared Reports</h1>
+          <h1>Insight</h1>
           <p className="muted">
             Welcome {welcomeName || user.email}
           </p>
